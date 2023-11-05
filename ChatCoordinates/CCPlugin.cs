@@ -9,6 +9,7 @@ using Dalamud.Game.Text;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 
 namespace ChatCoordinates
 {
@@ -63,6 +64,12 @@ namespace ChatCoordinates
                 HelpMessage =
                     $"/ctp <x> <y> [{Configuration.ZoneDelimiter} <partial zone name>] -- Places map marker and teleports to closest aetheryte"
             });
+
+            CommandManager.AddHandler("/ctf", new CommandInfo(OnFlagTeleportCommand)
+            {
+                HelpMessage =
+                    $"/ctf -- Teleports to closest aetheryte based on existing map marker"
+            });
         }
 
         private void OnCoordinateCommand(string cmd, string args)
@@ -78,6 +85,38 @@ namespace ChatCoordinates
             coordinate.Teleport = true;
 
             AetheryteFunctions.Teleport(coordinate);
+        }
+
+        private void OnFlagTeleportCommand(string cmd, string args)
+        {
+            var coordinate = GetCoordinateFromFlag();
+            if (coordinate == null) return;
+
+            coordinate.Teleport = true;
+
+            AetheryteFunctions.Teleport(coordinate);
+        }
+
+        private unsafe Coordinate? GetCoordinateFromFlag()
+        {
+            var ag = AgentMap.Instance();
+            var isMapMarkerSet = ag->IsFlagMarkerSet;
+            if (isMapMarkerSet == 1)
+            {
+                return new Coordinate
+                {
+                    NiceX = ag->FlagMapMarker.XFloat,
+                    NiceY = ag->FlagMapMarker.YFloat,
+                    Zone = null,
+                    ZoneSpecified = false,
+                    Teleport = false,
+                    UseTicket = false,
+                    TerritoryDetail = TerritoryManager.GetByTerritoryType((ushort)ag->FlagMapMarker.TerritoryId)
+                };
+            }
+            PrintError("Cannot teleport to flag marker because it is not set.");
+
+            return null;
         }
 
         private Coordinate? ProcessCoordinate(string cmd, string args)
@@ -106,7 +145,7 @@ namespace ChatCoordinates
 
             return coordinate;
         }
-        
+
         private void ShowHelp(string cmd)
         {
             switch (cmd)
@@ -129,7 +168,7 @@ namespace ChatCoordinates
                     break;
             }
         }
-        
+
         public void PrintChat(string msg)
         {
             ChatGui.Print(new XivChatEntry()
@@ -147,7 +186,7 @@ namespace ChatCoordinates
                 Type = Configuration.ErrorChatType
             });
         }
-        
+
         public void PrintChat(XivChatEntry msg)
         {
             ChatGui.Print(msg);
@@ -157,6 +196,7 @@ namespace ChatCoordinates
         {
             CommandManager.RemoveHandler("/coord");
             CommandManager.RemoveHandler("/ctp");
+            CommandManager.RemoveHandler("/ctf");
             ConfigUi.Dispose();
         }
     }

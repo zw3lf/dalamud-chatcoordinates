@@ -34,6 +34,7 @@ namespace ChatCoordinates.Managers
 
         private IEnumerable<TerritoryDetail> LoadTerritoryDetails()
         {
+            _data.Excel.RemoveSheetFromCache<Map>();
             return (from territoryType in _data.GetExcelSheet<TerritoryType>()
                 let type = territoryType.Bg.RawString.Split('/')
                 where type.Length >= 3
